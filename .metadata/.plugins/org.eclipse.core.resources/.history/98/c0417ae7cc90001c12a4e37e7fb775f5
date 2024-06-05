@@ -1,0 +1,743 @@
+
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.util.Scanner;
+
+import javax.imageio.ImageIO;
+
+import org.apache.commons.math3.complex.Complex;
+
+public class Controller {
+	private Fractale calcul;
+	//public static final Fractale = new Fractale.Builder().comp().plan
+			
+	public Controller(Fractale defaultCalcul) throws InterruptedException, IOException {
+		if (chooseView()) {
+			Fractale.Builder b = maker();
+			this.calcul = b.build();
+			ImageGenerator img = new ImageGenerator(calcul,Runtime.getRuntime().availableProcessors());
+			new View(img.image);
+			File outputfile = new File("fractale.jpg");
+			ImageIO.write(img.image, "jpg", outputfile);
+		} else {
+			this.calcul = defaultCalcul;
+			new View(this);
+		}
+	}
+
+	public boolean chooseView() {
+		Scanner sc = new Scanner(System.in);
+		System.out.println("vue terminale ->1. vue IG -> 2");
+		return sc.nextInt() == 1;
+	}
+
+	public Fractale.Builder maker() { //pour vue terminal
+		Complex x = selectJulia();
+		Scanner sc = new Scanner(System.in);
+		System.out.println("choisir un :" + '\n' + 
+				"1 : spas et taille d'abcisse d'image" + '\n' + 
+				"2 : taille du plan complexe et pas"
+				+ '\n' + "3 : taille d'abcisse d'image et taille du plan complexe ");
+		int choice = sc.nextInt();
+		double step = 0.0;
+		int size = 0;
+		int size2 = selectHeight();
+		double planSize = 0.0;
+		switch (choice) {
+		case 1: {
+			step = sc.nextDouble();
+			size = sc.nextInt();
+			break;
+		}
+		case 2: {
+			planSize = sc.nextDouble();
+			step = sc.nextDouble();
+			break;
+		}
+		case 3: {
+			size = sc.nextInt();
+			planSize = sc.nextDouble();
+			break;
+		}
+		}
+		System.out.println("choisir le nombre d'iterations max");
+		int maxIter = sc.nextInt();
+		System.out.println("choisir le radius (double)");
+		int radius = sc.nextInt();
+		Complex origin=selectOrigin();
+		return new Fractale.Builder().step(step).plan(planSize).size(size,size2).maxIter(maxIter).radius(radius).graphOrigin(origin).comp(x);
+	}
+
+	public static int selectHeight() {
+		Scanner sc = new Scanner(System.in);
+		System.out.println("choisir hauteur");
+		// String input
+		return sc.nextInt();
+	}
+
+	public static int selectLength() {
+		Scanner sc = new Scanner(System.in);
+		System.out.println("choisir largeur");
+		// String input
+		return sc.nextInt();
+	}
+
+	public static Complex selectOrigin() {
+		Scanner sc = new Scanner(System.in);
+		System.out.println("Choisissez le milieu de la vue (complexe)");
+		System.out.println("partie reelle : ");
+		int x = sc.nextInt();
+		System.out.println("partie imaginaire : ");
+		int y = sc.nextInt();
+		return new Complex(x, y);
+	}
+
+	public static double selectStep() {
+		Scanner sc = new Scanner(System.in);
+		System.out.println("Choose the step : ");
+		return sc.nextDouble();
+	}
+
+	public static Complex selectJulia() {
+		Scanner sc = new Scanner(System.in);
+		System.out.println("choisir la partie entiere de c dans la formule f(x)=z+c, z est un polynome de x");
+		double real = sc.nextDouble();
+		System.out.println("choisir la partie imaginaire");
+		double imaginary = sc.nextDouble();
+		Complex c = new Complex(real, imaginary);
+		return c;
+	}
+	
+	public BufferedImage generateImage() throws InterruptedException { //pour vue terminal
+		ImageGenerator g = new ImageGenerator(calcul, Runtime.getRuntime().availableProcessors());
+		return g.image;
+	}
+
+	public Complex getOrigin() { //passerelles entre la vue et le modèle
+		return calcul.getOrigin();
+	}
+
+	public void genButton(double plan, int size, double step, Complex c, int colors, Complex newOrigin,int max,double rad) {
+		Fractale calc = new Fractale.Builder().plan(plan).size(size, size).step(step).comp(c).col(colors)
+				.graphOrigin(newOrigin).radius(rad).maxIter(max).build();
+		this.calcul = calc;
+	}
+
+	public static void main(String[] args)  {
+		Fractale defaultCalcul = new Fractale.Builder().step(0.01).size(500, 500).build();
+		try {
+			Controller m = new Controller(defaultCalcul);
+		} catch (InterruptedException | IOException e) {		
+			e.printStackTrace();
+		}
+	}
+
+}
+
+public class View extends JFrame {
+	private Controller main;
+	private static final Dimension MAX_TEXT_SIZE = new Dimension(100, 20);
+	private BufferedImage im;
+	private JTextField gap;
+	private JTextField complexRealPart;
+	private JTextField complexImagPart;
+	private JPanel image;
+	private JTextField imageSize;
+	private JTextField zoomVal;
+	private JSlider sliderR;
+	private JSlider sliderV;
+	private JSlider sliderB;
+	private JLabel displayR;
+	private JLabel displayG;
+	private JLabel displayB;
+	private JTextField textField;
+	private JTextField textField_1;
+
+	public View(BufferedImage im) {
+		super("fractales");
+		this.getContentPane().add(new JLabel(new ImageIcon(im)));
+		pack();
+		setVisible(true);
+		setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+	}
+
+
+	/**
+	 * @wbp.parser.constructor
+	 */
+	public View(Controller main) throws InterruptedException {
+		super("fractales");
+		this.main = main;
+		this.im = main.generateImage();
+		JPanel params = new JPanel();
+		params.setMaximumSize(MAX_TEXT_SIZE);
+		params.setBorder(null);
+		params.setLayout(new BoxLayout(params, BoxLayout.X_AXIS));
+		image = new JPanel();
+
+
+		Box verticalBox = Box.createVerticalBox();
+		verticalBox.setBorder(new BevelBorder(BevelBorder.LOWERED));
+		params.add(verticalBox);
+
+		Box imparams = Box.createHorizontalBox();
+		imparams.setBorder(new BevelBorder(BevelBorder.LOWERED));
+		verticalBox.add(imparams);
+
+		JLabel gapL = new JLabel("Pas de calcul : ");
+		imparams.add(gapL);
+
+		gap = new JTextField("0.003");
+		imparams.add(gap);
+		gap.setMaximumSize(MAX_TEXT_SIZE);
+		
+		JLabel imageSizeL = new JLabel("Taille de l'image : ");
+		imparams.add(imageSizeL);
+		
+		imageSize = new JTextField("500");
+		imageSize.setMaximumSize(new Dimension(100, 20));
+		imparams.add(imageSize);
+
+		Box row2 = Box.createHorizontalBox();
+		row2.setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null));
+		verticalBox.add(row2);
+
+		JLabel complex = new JLabel("Complexe C dans la fonction f(x) = x² +C ");
+		row2.add(complex);
+
+		complexRealPart = new JTextField("-0.7269");
+		row2.add(complexRealPart);
+		complexRealPart.setMaximumSize(MAX_TEXT_SIZE);
+
+		JLabel lblNewLabel = new JLabel("+");
+		row2.add(lblNewLabel);
+
+		complexImagPart = new JTextField("0.1889");
+		row2.add(complexImagPart);
+		complexImagPart.setMaximumSize(MAX_TEXT_SIZE);
+
+		JLabel labl1 = new JLabel("i ");
+		row2.add(labl1);
+
+		Box moveRow = Box.createHorizontalBox();
+		moveRow.setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null));
+		verticalBox.add(moveRow);
+
+		JButton left = new JButton("gauche");
+		moveRow.add(left);
+		JButton right = new JButton("droite");
+		moveRow.add(right);
+		JButton up = new JButton("haut");
+		moveRow.add(up);
+		JButton down = new JButton("bas");
+		moveRow.add(down);
+
+		JLabel moveDistL = new JLabel("Distance du mouvement dans le plan");
+		moveRow.add(moveDistL);
+
+		JTextField moveDist = new JTextField("0.1");
+		moveRow.add(moveDist);
+		moveDist.setMaximumSize(MAX_TEXT_SIZE);
+
+		left.addActionListener(e -> {
+			try {
+				changeImage(4, Double.parseDouble(moveDist.getText()));
+			} catch (NumberFormatException | InterruptedException e4) {
+				e4.printStackTrace();
+			}
+		});
+		right.addActionListener(e -> {
+			try {
+				changeImage(3, Double.parseDouble(moveDist.getText()));
+			} catch (NumberFormatException | InterruptedException e3) {
+				e3.printStackTrace();
+			}
+		});
+		down.addActionListener(e -> {
+			try {
+				changeImage(2, Double.parseDouble(moveDist.getText()));
+			} catch (NumberFormatException | InterruptedException e2) {
+				e2.printStackTrace();
+			}
+		});
+		up.addActionListener(e -> {
+			try {
+				changeImage(1, Double.parseDouble(moveDist.getText()));
+			} catch (NumberFormatException | InterruptedException e2) {
+				e2.printStackTrace();
+			}
+		});
+		
+		Box zoomRow = Box.createHorizontalBox();
+		zoomRow.setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null));
+		verticalBox.add(zoomRow);
+		
+		JButton zoom = new JButton("Zoom");
+		zoomRow.add(zoom);
+		
+		JButton unzoom = new JButton("Unzoom");
+		zoomRow.add(unzoom);
+		
+		zoomVal = new JTextField();
+		zoomVal.setText("10");
+		zoomVal.setMaximumSize(new Dimension(100, 20));
+		zoomVal.setColumns(10);
+		zoomRow.add(zoomVal);
+		
+		Component horizontalGlue = Box.createHorizontalGlue();
+		zoomRow.add(horizontalGlue);
+		
+		Box boxR = Box.createHorizontalBox();
+		verticalBox.add(boxR);
+		
+		sliderR = new JSlider();
+		sliderR.setValue(0);
+		sliderR.setToolTipText("Rouge");
+		sliderR.setSnapToTicks(true);
+		sliderR.setPaintLabels(true);
+		sliderR.setMinimum(0);
+		sliderR.setMaximumSize(new Dimension(180, 20));
+		sliderR.setMaximum(360);
+		boxR.add(sliderR);
+		
+		displayR = new JLabel("couleur : "+sliderR.getValue());
+		boxR.add(displayR);
+		
+		Component horizontalGlue_3 = Box.createHorizontalGlue();
+		boxR.add(horizontalGlue_3);
+		
+		JLabel lblNewLabel_1 = new JLabel("maxIter et radius");
+		verticalBox.add(lblNewLabel_1);
+		
+		textField = new JTextField("1000");
+		verticalBox.add(textField);
+		textField.setColumns(10);
+		textField.setMaximumSize(MAX_TEXT_SIZE);
+		
+		textField_1 = new JTextField("2.0");
+		verticalBox.add(textField_1);
+		textField_1.setColumns(10);
+		textField_1.setMaximumSize(MAX_TEXT_SIZE);
+		
+
+
+		JButton gen = new JButton("Generer !");
+		verticalBox.add(gen);
+
+		Component verticalGlue = Box.createVerticalGlue();
+		verticalBox.add(verticalGlue);
+		
+		sliderR.addChangeListener(e -> updateColorsLabel(1));
+
+
+		gen.addActionListener(e -> {
+			try {
+				changeImage(0, 0);
+			} catch (InterruptedException e1) {
+				e1.printStackTrace();
+			}
+		});
+		zoom.addActionListener(e -> {
+            try {
+                String str = Double
+                    .toString(Double.parseDouble(gap.getText()) / ((Double.parseDouble(zoomVal.getText()) + 12) * 0.09));
+                double st = Double.parseDouble(gap.getText()) / ((Double.parseDouble(zoomVal.getText())+ 12) * 0.09);
+                if (st < Double.parseDouble(gap.getText())){
+                    gap.setText(str);
+                    changeImage(0,0);
+                }
+            } catch (InterruptedException e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
+            
+        });
+        
+        unzoom.addActionListener(e -> {
+            try {
+                String str = Double
+                            .toString(Double.parseDouble(gap.getText()) * ((Double.parseDouble(zoomVal.getText())+12) * 0.09));
+                    double st = Double.parseDouble(gap.getText()) * ((Double.parseDouble(zoomVal.getText())+ 12) * 0.09);
+                    if (st > Double.parseDouble(gap.getText())){
+                        gap.setText(str);
+                        changeImage(0,0);
+                    }
+                } catch (InterruptedException e1) {
+                    // TODO Auto-generated catch block
+                    e1.printStackTrace();
+                }
+    
+
+        });
+        
+        JLabel remarkablesL = new JLabel("fractales remarquables");
+        verticalBox.add(remarkablesL);
+        
+        JComboBox<String> remarkables = new JComboBox();
+        remarkables.setModel(new DefaultComboBoxModel(new String[] {"1", "2", "3", "4", "5"}));
+        remarkables.setMaximumRowCount(5);
+        verticalBox.add(remarkables);
+        
+        remarkables.addActionListener(e->{
+        	String s = (String) remarkables.getSelectedItem();
+        	switch (s) {
+        	case "1" : complexRealPart.setText(Double.toString(-0.4)); 
+        	complexImagPart.setText(Double.toString(0.6)); 
+        	break;
+        	case "2" : complexRealPart.setText(Double.toString(0.285)); 
+        	complexImagPart.setText(Double.toString(0.01)); 
+        	break;
+        	case "3" : complexRealPart.setText(Double.toString(-0.70176)); 
+        	complexImagPart.setText(Double.toString(0.3842)); 
+        	break;
+        	case "4" : complexRealPart.setText(Double.toString(-0.8)); 
+        	complexImagPart.setText(Double.toString(0.156)); 
+        	break;
+		case "5" : complexRealPart.setText(Double.toString(-0.7269)); 
+        	complexImagPart.setText(Double.toString(0.1889)); 
+        	break;
+        	}
+        	try {
+				changeImage(0,0);
+			} catch (InterruptedException e1) {
+				e1.printStackTrace();
+			}
+        });
+        
+        Component verticalGlue_1 = Box.createVerticalGlue();
+        verticalBox.add(verticalGlue_1);
+        
+        JButton saveButton = new JButton("Sauvegarder");
+        verticalBox.add(saveButton);
+        
+        saveButton.addActionListener(e -> {
+            try {
+            	 BufferedImage img = main.generateImage();
+                File outputfile = new File("image.jpg");
+                ImageIO.write(img, "jpg", outputfile);
+            } catch (InterruptedException e1) {
+                e1.printStackTrace();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+        });
+
+		im = main.generateImage();
+		image.add(new JLabel(new ImageIcon(im)));
+		this.setDefaultCloseOperation(EXIT_ON_CLOSE);
+		// @wbp.parser.constructor
+
+		this.getContentPane().setLayout(new BorderLayout(0, 0));
+		this.getContentPane().add(params, BorderLayout.WEST);
+		this.getContentPane().add(image, BorderLayout.CENTER);
+
+		this.pack();
+		this.setVisible(true);
+	}
+
+	
+	
+	
+
+	private void changeImage(int direction, double distance) throws InterruptedException {
+		image.removeAll();
+		int colors = sliderR.getValue();
+		Complex left = new Complex(0, distance);
+		Complex right = new Complex(0, -distance);
+		Complex movement = new Complex(0, 0);
+		switch (direction) {
+		case 1:
+			movement = Complex.ZERO.add(-distance);
+			break;
+		case 2:
+			movement = Complex.ZERO.add(distance);
+			break;
+		case 3:
+			movement = right;
+			break;
+		case 4:
+			movement = left;
+			break;
+		}
+//TODO: ajouter thread pour le calcul+ bouton stop
+		main.genButton(0, Integer.parseInt(imageSize.getText()),
+				Double.parseDouble(gap.getText()), new Complex((Double.parseDouble(complexRealPart.getText())),
+						(Double.parseDouble(complexImagPart.getText()))),
+				colors, movement.add(main.getOrigin()),Integer.parseInt(textField.getText()),Double.parseDouble(textField_1.getText()));
+		im = main.generateImage();
+		image.add(new JLabel(new ImageIcon(im)));
+		image.invalidate();
+		image.revalidate();
+		image.repaint();
+		this.pack();
+		this.repaint();
+	}
+	
+	private void updateColorsLabel(int slider) {
+		switch (slider) {
+		case 1: displayR.setText("R : "+String.valueOf(sliderR.getValue())); break;
+		}
+	}
+
+}
+
+import org.apache.commons.math3.complex.Complex;
+import java.math.*;
+
+public class Fractale {
+	private final Complex comp;
+	private final int[] polynome;
+	private final int maxIter;
+	private final double radius;
+	private final Complex[][] graph;
+	private final Complex graphOrigin;
+	private final double step;
+	private final double planSize;
+	private final int col;
+
+	public static class Builder {
+
+		private double planSize;
+		private Complex comp;
+		private int[] polynome;
+		private int maxIter;
+		private double radius;
+		private Complex[][] graph;
+		private Complex graphOrigin;
+		private double step;
+		private int tabX;
+		private int tabY;
+		private int col;
+
+		public Builder() { //champs obligatoires
+			this.maxIter = 100000;
+			this.comp = new Complex(-0.7269, 0.1889);
+			this.step = 0.0;
+			this.planSize = 0.0;
+			this.radius = 2.0;
+			this.col = 1;
+		}
+//methodes facultatives
+		public Builder size(int x, int y) {
+			this.tabX = x;
+			this.tabY = y;
+			return this;
+		}
+		
+
+		public Builder plan(double x) {
+			this.planSize = x;
+			return this;
+		}
+
+		public Builder step(double x) {
+			this.step = x;
+			return this;
+		}
+
+		public Builder maxIter(int x) {
+			this.maxIter = x;
+			return this;
+		}
+
+		public Builder graphOrigin(Complex x) {
+			this.graphOrigin = x;
+			return this;
+		}
+
+		public Builder comp(Complex x) {
+			this.comp = x;
+			return this;
+		}
+
+		public Builder polynome(int[] x) {
+			this.polynome = x;
+			return this;
+		}
+
+		public Builder radius(double x) {
+			this.radius = x;
+			return this;
+		}
+
+		public Builder col(int col) {
+			this.col = col;
+			return this;
+		}
+
+		Complex[][] fillGraph() { //remplit le tableau de complexes 
+			for (int i = 0; i < tabX + 1; i++) {
+				for (int j = 0; j < tabY + 1; j++) {
+					graph[i][j] = new Complex(graphOrigin.getReal() - planSize + j * step,
+							graphOrigin.getImaginary() + planSize - i * step);
+				}
+			}
+
+			return graph;
+		}
+
+		public Fractale build() { //initialisation auto des champs
+
+			if (tabX == 0.0) {
+				tabX = (int) (planSize / step) * 2;
+				tabY = (int) (planSize / step) * 2;
+				// TODO: utiliser l'autre val de planSize
+			}
+			if (planSize == 0.0) {
+				planSize = step * tabX / 2;
+			}
+			if (step == 0.0) {
+				step = planSize / tabX * 2;
+			}
+			if (graphOrigin == null)
+				this.graphOrigin = new Complex(0, 0);
+			graph = new Complex[tabX + 1][tabY + 1];
+			fillGraph();
+			return new Fractale(this);
+
+		}
+	}
+	// valeurs obligatoires : tabsizes et step ou tabsizes et planSize ou planSize et step
+
+	public Fractale(Builder builder) {
+		comp = builder.comp;
+		polynome = builder.polynome;
+		maxIter = builder.maxIter;
+		radius = builder.radius;
+		graphOrigin = builder.graphOrigin;
+		step = builder.step;
+		graph = builder.graph;
+		planSize = builder.planSize;
+		col = builder.col;
+	}
+
+
+	static double module(Complex z) {
+		return Math.sqrt(z.getReal() * z.getReal() + z.getImaginary() * z.getImaginary());
+	}
+
+	int divergenceIndex(Complex z0) { //calcule l'index (aka la couleur) d'un complexe
+		int ite = 0;
+		Complex zn = z0;
+		// sortie de boucle si divergence
+		while (ite < maxIter && (module(zn)) <= radius) {
+			zn = zn.multiply(zn);
+			zn = zn.add(comp);
+
+			ite++;
+		}
+
+		return ite;
+	}
+
+	Complex[][] getGraph() {
+		return graph; 
+	}
+
+	public int getX() {
+		return graph.length;
+	}
+
+	public int getY() {
+		return graph[0].length;
+	}
+
+	public Complex getOrigin() {
+		return graphOrigin;
+	}
+
+	public double getPlan() {
+		return planSize;
+	}
+
+	public int getSize() {
+		return graph.length;
+	}
+
+	public double getStep() {
+		return step;
+	}
+
+	public int getMaxIter() {
+		return maxIter;
+	}
+
+	public int getCol() {
+		return col;
+	}
+}
+
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import static java.util.stream.IntStream.range;
+import java.util.concurrent.CountDownLatch;
+import java.util.stream.Stream;
+
+import javax.imageio.ImageIO;
+import java.awt.Color;
+
+import org.apache.commons.math3.complex.Complex;
+
+public class ImageGenerator {
+
+	private final Fractale frac;
+	private final int tabX;
+	private final int tabY;
+	private int[][] colors;
+	BufferedImage image = new BufferedImage(200, 200, 2); // placeholder
+	private final int nombreThreads;
+
+	ImageGenerator(Fractale frac, int nombreThreads) {
+		this.nombreThreads = nombreThreads;
+		long start = System.currentTimeMillis();
+		Thread[] threads = new Thread[nombreThreads];
+		this.frac = frac;
+		tabX = frac.getX();
+		tabY = frac.getY();
+		colors = new int[tabX][tabY];
+		this.image = new BufferedImage(tabX, tabY, BufferedImage.TYPE_INT_RGB);
+		int div = tabX / nombreThreads;
+		for (int i = 0; i < nombreThreads; i++) {
+			final int k = i;
+
+			if (i == nombreThreads - 1 && div * nombreThreads != tabX) { //cas ou les threads ne couvrent pas uniformément l'image
+				threads[i] = new Thread(() -> {
+					range(k * div, tabX).parallel().
+					forEach(a -> range(0, tabY).parallel()
+							.forEach(j -> image.setRGB(a,j, (Color.HSBtoRGB((float) calculate(frac, a, j) / 1000, 1f, 1f) + frac.getCol()))));
+				});
+			} else {
+				threads[k] = new Thread(() -> {
+					range(k * div, div * (k + 1)).parallel()
+					.forEach(a -> range(0, tabY).parallel()
+							.forEach(j -> image
+							.setRGB(a, j, ((Color.HSBtoRGB((float) calculate(frac, a, j) / 1000, 1f, 1f) + frac.getCol())))));
+					// .forEach(j -> image.setRGB(a, j, (calculate(frac, a, j))*frac.getCol())));
+					// .forEach(j -> image.setRGB(a, j, (calculate(frac, a, j))*frac.getCol())));
+					// méthodes de calcul de couleur alternatives
+				});
+			}
+			threads[i].start();
+		}
+
+		Stream.of(threads).forEach(k -> { //attente que l'image soit finie
+			try {
+				k.join();
+			} catch (InterruptedException e) {
+				System.out.println("could not join");
+				e.printStackTrace();
+			}
+		});
+		long finish = System.currentTimeMillis();
+		long timeElapsed = finish - start;
+		//System.out.println(timeElapsed);
+	}
+
+	public int calculate(Fractale frac, int i, int j) {
+		colors[i][j] = frac.divergenceIndex(frac.getGraph()[i][j]);
+		return colors[i][j];
+	}
+
+}
