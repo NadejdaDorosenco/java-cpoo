@@ -1,11 +1,11 @@
 Pour lancer en terminal ou en interface graphique un choix est demandé dans le terminal au lancement
 
-Pour lancer le projet sur Windows, faire avec le cmd dans le fichier src :
+Pour lancer le projet sur Windows, faire avec le cmd dans le fichier src :  
 javac -classpath "commons-math3-3.6.1.jar;." Controller.java 
 puis 
 java -classpath "commons-math3-3.6.1.jar;." Controller  
 
-Pour lancer le projet sur Mac, faire avec le cmd dans le dossier du projet :
+Pour lancer le projet sur Mac, faire avec le cmd dans le dossier du projet :  
 javac -classpath "commons-math3-3.6.1.jar:." Controller.java Fractale.java ImageGenerator.java View.java  
 puis 
 java -classpath "commons-math3-3.6.1.jar:." Controller  
